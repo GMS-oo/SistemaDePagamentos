@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Compras</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f3;
+      color: #1a1a18;
+      font-size: 15px;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e5e5e2;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 18px; font-weight: 500; }
+
+    main { max-width: 1000px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    /* Card */
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e2;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card-title { font-size: 14px; font-weight: 500; color: #666; margin-bottom: 1rem; }
+
+    /* Formulário */
+    .form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+    .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+    .field label { font-size: 12px; color: #888; }
+    .field input, .field select {
+      height: 36px; padding: 0 10px;
+      border: 1px solid #ddd; border-radius: 8px;
+      font-size: 14px; background: #fafafa; color: inherit;
+      width: 100%;
+    }
+    .field input:focus, .field select:focus { outline: 2px solid #333; outline-offset: -1px; }
+
+    .btn {
+      height: 36px; padding: 0 16px;
+      border: 1px solid #ccc; border-radius: 8px;
+      cursor: pointer; font-size: 14px;
+      background: #fff; color: #1a1a18;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #f0f0ee; }
+    .btn-primary { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+    .btn-primary:hover { background: #333; }
+    .btn-danger { color: #a32d2d; }
+    .btn-danger:hover { background: #fff0f0; border-color: #f09595; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+    .stat { background: #f5f5f3; border-radius: 8px; padding: 0.75rem 1rem; }
+    .stat-label { font-size: 11px; color: #999; margin-bottom: 4px; }
+    .stat-value { font-size: 18px; font-weight: 500; }
+    .stat-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+
+    /* Filtros */
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+    .filter-row input, .filter-row select {
+      height: 34px; padding: 0 10px; border: 1px solid #ddd;
+      border-radius: 8px; font-size: 13px; background: #fafafa;
+    }
+    .filter-row input { flex: 1; min-width: 120px; }
+
+    /* Tabela */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { border-bottom: 1px solid #e5e5e2; }
+    th { text-align: left; padding: 8px 10px; font-weight: 500; font-size: 12px; color: #888; }
+    td { padding: 8px 10px; border-bottom: 1px solid #f0f0ee; }
+    tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 99px; font-size: 11px;
+    }
+    td .actions { display: flex; gap: 4px; }
+    td .actions button {
+      background: none; border: none; cursor: pointer;
+      font-size: 15px; padding: 2px 6px; border-radius: 6px; color: #888;
+    }
+    td .actions button:hover { background: #f0f0ee; color: #1a1a18; }
+    .empty { text-align: center; color: #aaa; padding: 2rem; font-size: 14px; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: #1a1a18; color: #fff;
+      padding: 0.6rem 1.2rem; border-radius: 8px;
+      font-size: 13px; opacity: 0;
+      transition: opacity .3s;
+      pointer-events: none; z-index: 9999;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛒 Controle de Compras</h1>
+</header>
+
+<main>
+  <!-- Formulário -->
+  <div class="card">
+    <p class="card-title" id="form-titulo">Nova compra</p>
+    <div class="form-row">
+      <div class="field" style="min-width:200px;">
+        <label>Produto / Descrição</label>
+        <input type="text" id="f-desc" placeholder="Ex: Teclado mecânico" />
+      </div>
+      <div class="field" style="max-width:130px;">
+        <label>Valor (R$)</label>
+        <input type="number" id="f-valor" placeholder="0.00" min="0" step="0.01" />
+      </div>
+      <div class="field" style="max-width:80px;">
+        <label>Qtd</label>
+        <input type="number" id="f-qtd" value="1" min="1" />
+      </div>
+      <div class="field" style="max-width:150px;">
+        <label>Categoria</label>
+        <select id="f-cat">
+          <option>Geral</option>
+          <option>Eletrônico</option>
+          <option>Alimentação</option>
+          <option>Serviço</option>
+          <option>Software</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:150px;">
+        <label>Data</label>
+        <input type="date" id="f-data" />
+      </div>
+      <button class="btn btn-primary" id="btn-salvar" onclick="salvar()">+ Adicionar</button>
+      <button class="btn" id="btn-cancelar" style="display:none;" onclick="cancelarEdicao()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="card">
+    <p class="card-title">Estatísticas</p>
+    <div class="stats" id="stats-area">
+      <div class="stat"><div class="stat-label">—</div><div class="stat-value">—</div></div>
+    </div>
+  </div>
+
+  <!-- Tabela -->
+  <div class="card">
+    <div class="filter-row">
+      <input type="text" id="busca" placeholder="Buscar..." oninput="carregarDados()" />
+      <select id="filtro-cat" onchange="carregarDados()">
+        <option value="">Todas categorias</option>
+        <option>Geral</option><option>Eletrônico</option>
+        <option>Alimentação</option><option>Serviço</option>
+        <option>Software</option><option>Outro</option>
+      </select>
+      <select id="sort-col" onchange="carregarDados()">
+        <option value="data">Por data</option>
+        <option value="valor">Por valor</option>
+        <option value="nome">Por nome</option>
+      </select>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Produto</th><th>Categoria</th>
+          <th>Qtd</th><th>Valor unit.</th><th>Subtotal</th>
+          <th>Data</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty-msg" class="empty" style="display:none;">Nenhum registro encontrado.</div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const API = '/api/compras';
+  let editId = null;
+
+  const catColors = {
+    Geral:        { bg: '#e1f5ee', color: '#0f6e56' },
+    Eletrônico:   { bg: '#e6f1fb', color: '#185fa5' },
+    Alimentação:  { bg: '#eeedfe', color: '#534ab7' },
+    Serviço:      { bg: '#faeeda', color: '#854f0b' },
+    Software:     { bg: '#faece7', color: '#993c1d' },
+    Outro:        { bg: '#f1efe8', color: '#5f5e5a' },
+  };
+
+  function fmt(n) {
+    return Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function hoje() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  document.getElementById('f-data').value = hoje();
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  async function carregarDados() {
+    const busca = document.getElementById('busca').value;
+    const cat   = document.getElementById('filtro-cat').value;
+    const ordem = document.getElementById('sort-col').value;
+
+    const params = new URLSearchParams();
+    if (busca) params.set('busca', busca);
+    if (cat)   params.set('categoria', cat);
+    if (ordem) params.set('ordem', ordem);
+
+    const [resLista, resStats] = await Promise.all([
+      fetch(`${API}?${params}`).then(r => r.json()),
+      fetch(`${API}/stats`).then(r => r.json()),
+    ]);
+
+    renderTabela(resLista.data || []);
+    renderStats(resStats.data || {});
+  }
+
+  function renderTabela(lista) {
+    const tbody = document.getElementById('tbody');
+    const empty = document.getElementById('empty-msg');
+
+    if (!lista.length) {
+      tbody.innerHTML = '';
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = lista.map((r, i) => {
+      const c    = catColors[r.categoria] || catColors['Outro'];
+      const data = r.data_compra ? r.data_compra.split('T')[0].split('-').reverse().join('/') : '-';
+      return `<tr>
+        <td style="color:#bbb;font-size:12px;">${i + 1}</td>
+        <td style="font-weight:500;">${esc(r.descricao)}</td>
+        <td><span class="badge" style="background:${c.bg};color:${c.color};">${r.categoria}</span></td>
+        <td>${r.quantidade}</td>
+        <td>${fmt(r.valor)}</td>
+        <td style="font-weight:500;">${fmt(r.subtotal)}</td>
+        <td style="color:#999;">${data}</td>
+        <td><div class="actions">
+          <button onclick="iniciarEdicao(${r.id})" title="Editar">✏️</button>
+          <button onclick="deletar(${r.id})" title="Excluir">🗑️</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderStats(s) {
+    if (!s.total_registros) {
+      document.getElementById('stats-area').innerHTML =
+        '<p style="color:#aaa;font-size:13px;">Nenhum dado ainda.</p>';
+      return;
+    }
+    const pc = (s.por_categoria || [])[0];
+    document.getElementById('stats-area').innerHTML = `
+      <div class="stat"><div class="stat-label">Total gasto</div><div class="stat-value">${fmt(s.total_gasto)}</div><div class="stat-sub">${s.total_registros} registro(s)</div></div>
+      <div class="stat"><div class="stat-label">Ticket médio</div><div class="stat-value">${fmt(s.ticket_medio)}</div><div class="stat-sub">por compra</div></div>
+      <div class="stat"><div class="stat-label">Mediana</div><div class="stat-value">${fmt(s.mediana)}</div><div class="stat-sub">valor central</div></div>
+      <div class="stat"><div class="stat-label">Maior compra</div><div class="stat-value">${fmt(s.maior_compra)}</div></div>
+      <div class="stat"><div class="stat-label">Menor compra</div><div class="stat-value">${fmt(s.menor_compra)}</div></div>
+      <div class="stat"><div class="stat-label">Total itens</div><div class="stat-value">${s.total_itens}</div><div class="stat-sub">unidades</div></div>
+      ${pc ? `<div class="stat"><div class="stat-label">Top categoria</div><div class="stat-value" style="font-size:15px;">${pc.categoria}</div><div class="stat-sub">${fmt(pc.total)}</div></div>` : ''}
+    `;
+  }
+
+  async function salvar() {
+    const body = {
+      descricao:   document.getElementById('f-desc').value.trim(),
+      valor:       parseFloat(document.getElementById('f-valor').value),
+      quantidade:  parseInt(document.getElementById('f-qtd').value) || 1,
+      categoria:   document.getElementById('f-cat').value,
+      data_compra: document.getElementById('f-data').value || hoje(),
+    };
+
+    if (!body.descricao || isNaN(body.valor)) {
+      toast('Preencha descrição e valor!');
+      return;
+    }
+
+    const url    = editId ? `${API}/${editId}` : API;
+    const method = editId ? 'PUT' : 'POST';
+
+    const res  = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+
+    if (!json.ok) { toast('Erro: ' + json.erro); return; }
+
+    toast(editId ? 'Compra atualizada!' : 'Compra adicionada!');
+    cancelarEdicao();
+    carregarDados();
+  }
+
+  async function iniciarEdicao(id) {
+    const res  = await fetch(`${API}/${id}`);
+    const json = await res.json();
+    if (!json.ok) return;
+    const r = json.data;
+
+    document.getElementById('f-desc').value  = r.descricao;
+    document.getElementById('f-valor').value = r.valor;
+    document.getElementById('f-qtd').value   = r.quantidade;
+    document.getElementById('f-cat').value   = r.categoria;
+    document.getElementById('f-data').value  = r.data_compra?.split('T')[0] || hoje();
+
+    editId = id;
+    document.getElementById('form-titulo').textContent  = 'Editar compra';
+    document.getElementById('btn-salvar').textContent   = '✔ Salvar alterações';
+    document.getElementById('btn-cancelar').style.display = '';
+    document.getElementById('f-desc').focus();
+  }
+
+  function cancelarEdicao() {
+    editId = null;
+    document.getElementById('f-desc').value  = '';
+    document.getElementById('f-valor').value = '';
+    document.getElementById('f-qtd').value   = '1';
+    document.getElementById('f-cat').value   = 'Geral';
+    document.getElementById('f-data').value  = hoje();
+    document.getElementById('form-titulo').textContent    = 'Nova compra';
+    document.getElementById('btn-salvar').textContent     = '+ Adicionar';
+    document.getElementById('btn-cancelar').style.display = 'none';
+  }
+
+  async function deletar(id) {
+    if (!confirm('Excluir este registro?')) return;
+    const res  = await fetch(`${API}/${id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (json.ok) { toast('Excluído!'); carregarDados(); }
+    else toast('Erro: ' + json.erro);
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  carregarDados();
+</script>
+</body>
+</html>
