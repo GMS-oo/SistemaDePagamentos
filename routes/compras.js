@@ -1,8 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const db      = require('../db/connection');
-
-// GET /api/compras — lista todas com filtros opcionais
+const db      = require('../db/connection'); 
 router.get('/', async (req, res) => {
   try {
     const { categoria, busca, ordem } = req.query;
@@ -51,16 +49,18 @@ router.get('/stats', async (req, res) => {
     `);
 
     // Mediana via subconsulta
-    const [[{ mediana }]] = await db.query(`
-      SELECT AVG(subtotal) AS mediana
-      FROM (
-        SELECT subtotal
-        FROM compras
-        ORDER BY subtotal
-        LIMIT 2 - (SELECT COUNT(*) FROM compras) % 2
-        OFFSET (SELECT (COUNT(*) - 1) / 2 FROM compras)
-      ) sub
-    `);
+const [medianaResult] = await db.query(`
+  SELECT AVG(subtotal) AS mediana
+  FROM (
+    SELECT subtotal
+    FROM compras
+    ORDER BY subtotal
+    LIMIT 2 - (SELECT COUNT(*) FROM compras) % 2
+    OFFSET (SELECT IF(COUNT(*) > 0, (COUNT(*) - 1) / 2, 0) FROM compras)
+  ) sub
+`);
+
+const mediana = medianaResult[0]?.mediana || 0;
 
     res.json({
       ok: true,
